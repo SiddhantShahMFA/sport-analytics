@@ -46,11 +46,53 @@ wait_for_tcp() {
     return 1
 }
 
-# ── bench / app bootstrapping (mostly no-ops when image is pre-built) ──
+# ── Diagnostics ──────────────────────────────────────────────────────
+
+diagnose_bench_state() {
+    log "=== Bench state diagnostics ==="
+    log "BENCH_DIR=${BENCH_DIR}"
+
+    if [[ -f /home/frappe/.build-complete ]]; then
+        log "Docker build marker: FOUND (image was pre-built)"
+    else
+        log "Docker build marker: NOT FOUND (image needs runtime init)"
+    fi
+
+    if [[ -d "${BENCH_DIR}" ]]; then
+        log "Bench dir exists"
+        if [[ -d "${BENCH_DIR}/sites" ]]; then
+            log "sites/ exists"
+            ls "${BENCH_DIR}/sites/" 2>/dev/null | while read -r item; do log "  sites/${item}"; done
+        else
+            log "sites/ MISSING"
+        fi
+        if [[ -d "${BENCH_DIR}/apps" ]]; then
+            log "apps/ exists"
+            ls "${BENCH_DIR}/apps/" 2>/dev/null | while read -r item; do log "  apps/${item}"; done
+        else
+            log "apps/ MISSING"
+        fi
+        if [[ -f "${BENCH_DIR}/sites/assets/assets.json" ]]; then
+            log "assets.json exists ($(wc -c < "${BENCH_DIR}/sites/assets/assets.json") bytes)"
+        else
+            log "assets.json MISSING"
+        fi
+    else
+        log "Bench dir MISSING entirely"
+    fi
+    log "=== End diagnostics ==="
+}
+
+# ── bench / app bootstrapping ────────────────────────────────────────
 
 ensure_bench() {
+    if [[ -f /home/frappe/.build-complete ]]; then
+        log "Pre-built bench detected (Docker build marker found). Skipping bench init."
+        return
+    fi
+
     if [[ -d "${BENCH_DIR}/sites" && -f "${BENCH_DIR}/sites/apps.txt" ]]; then
-        log "Bench already exists at ${BENCH_DIR} (pre-built image)"
+        log "Bench already exists at ${BENCH_DIR}"
         return
     fi
 
@@ -79,6 +121,14 @@ ensure_insights_app() {
     if ! "${BENCH_DIR}/env/bin/python" -c "import insights" >/dev/null 2>&1; then
         log "Installing Insights app into bench environment"
         "${BENCH_DIR}/env/bin/pip" install --quiet --upgrade -e "${BENCH_DIR}/apps/insights"
+    fi
+
+    if [[ -f apps/insights/frontend/package.json ]]; then
+        if [[ ! -d apps/insights/frontend/node_modules ]]; then
+            log "Installing Insights frontend dependencies"
+            cd apps/insights/frontend && (yarn install --frozen-lockfile 2>/dev/null || yarn install)
+            cd "${BENCH_DIR}"
+        fi
     fi
 
     mkdir -p "${BENCH_DIR}/sites"
@@ -198,35 +248,59 @@ install_and_migrate() {
 
 # ── Asset management ───────────────────────────────────────────────────
 
-ensure_assets() {
+setup_assets() {
     cd "${BENCH_DIR}"
 
-    if ! is_true "${BUILD_ASSETS}"; then
-        log "Skipping runtime asset build (BUILD_ASSETS=${BUILD_ASSETS}; assets are pre-built in Docker image)"
-        return 0
-    fi
+    mkdir -p sites/assets
 
-    log "Building frontend assets at runtime"
-    if ! bench build --apps frappe; then
-        log "Frappe asset build failed"
-        return 1
-    fi
+    # Ensure asset symlinks exist for each app
+    for app_dir in apps/*/; do
+        local app_name
+        app_name=$(basename "${app_dir}")
+        local app_public="${app_dir}${app_name}/public"
+        local asset_link="sites/assets/${app_name}"
 
-    if is_true "${BUILD_INSIGHTS_ASSETS:-0}"; then
-        if ! NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=384}" bench build --apps insights; then
-            log "Insights asset build failed; continuing with Frappe bundles only"
+        if [[ -d "${app_public}" && ! -e "${asset_link}" ]]; then
+            ln -s "../../${app_public}" "${asset_link}"
+            log "Created asset symlink: ${asset_link} -> ../../${app_public}"
+        fi
+    done
+
+    # Verify assets.json exists and is non-empty
+    if [[ -f sites/assets/assets.json ]]; then
+        local size
+        size=$(wc -c < sites/assets/assets.json)
+        if [[ "${size}" -gt 10 ]]; then
+            log "Pre-built assets.json found (${size} bytes)"
+            return 0
         fi
     fi
 
-    return 0
+    log "assets.json missing or empty. Attempting runtime build..."
+    if ! is_true "${BUILD_ASSETS}"; then
+        log "BUILD_ASSETS is off. Building frappe assets only (required for UI)."
+    fi
+
+    if bench build --apps frappe 2>&1; then
+        log "Frappe runtime asset build succeeded"
+    else
+        log "WARNING: Frappe asset build failed"
+    fi
+
+    if is_true "${BUILD_INSIGHTS_ASSETS:-0}"; then
+        if NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=384}" bench build --apps insights 2>&1; then
+            log "Insights runtime asset build succeeded"
+        else
+            log "WARNING: Insights asset build failed"
+        fi
+    fi
 }
 
 ensure_assets_manifest() {
-    local assets_dir="${BENCH_DIR}/sites/assets"
-    local assets_json="${assets_dir}/assets.json"
-    mkdir -p "${assets_dir}"
+    local assets_json="${BENCH_DIR}/sites/assets/assets.json"
     if [[ ! -f "${assets_json}" ]]; then
-        log "Creating placeholder assets manifest"
+        log "Creating placeholder assets manifest (no pre-built assets found)"
+        mkdir -p "${BENCH_DIR}/sites/assets"
         printf "{}\n" > "${assets_json}"
     fi
 }
@@ -326,6 +400,7 @@ export ALLOW_SITE_CREATION
 export INSTALL_INSIGHTS_APP="${INSTALL_INSIGHTS_APP:-1}"
 export BUILD_ASSETS
 export BUILD_INSIGHTS_ASSETS="${BUILD_INSIGHTS_ASSETS:-0}"
+export FRAPPE_DB_NAME="${FRAPPE_DB_NAME:-}"
 
 required_env=(FRAPPE_DB_HOST FRAPPE_DB_PORT FRAPPE_DB_USER FRAPPE_DB_PASSWORD FRAPPE_DB_NAME FRAPPE_REDIS_CACHE FRAPPE_REDIS_QUEUE FRAPPE_REDIS_SOCKETIO)
 for key in "${required_env[@]}"; do
@@ -341,12 +416,13 @@ redis_port="$(python3 -c "from urllib.parse import urlparse; import os; u=urlpar
 wait_for_tcp "${FRAPPE_DB_HOST}" "${FRAPPE_DB_PORT}" "MariaDB"
 wait_for_tcp "${redis_host}" "${redis_port}" "Redis"
 
+diagnose_bench_state
 ensure_bench
 ensure_insights_app
 configure_common
 create_or_restore_site
 install_and_migrate
-ensure_assets || true
+setup_assets
 ensure_assets_manifest
 
 start_process "$@"

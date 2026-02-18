@@ -22,17 +22,30 @@ WORKDIR /home/frappe/frappe-bench
 COPY --chown=frappe:frappe . /tmp/insights-src
 RUN cp -a /tmp/insights-src apps/insights \
     && ./env/bin/pip install --quiet --upgrade -e apps/insights \
-    && printf "frappe\ninsights\n" > sites/apps.txt
+    && printf "frappe\ninsights\n" > sites/apps.txt \
+    && rm -rf /tmp/insights-src
 
 # ── 3. Install frontend deps + build all assets at build time ─────────
 RUN if [ -f apps/insights/frontend/package.json ]; then \
         cd apps/insights/frontend && yarn install --frozen-lockfile 2>/dev/null || yarn install; \
     fi
 
-RUN bench build --apps frappe
-RUN NODE_OPTIONS="--max-old-space-size=1536" bench build --apps insights
+RUN bench build --apps frappe \
+    && echo "Frappe assets built successfully"
 
-# ── 4. Entrypoint (runtime: configure site, migrate, start) ──────────
+RUN NODE_OPTIONS="--max-old-space-size=1536" bench build --apps insights \
+    && echo "Insights assets built successfully" \
+    || echo "WARNING: Insights frontend build failed (likely OOM). Frappe assets are still available."
+
+# ── 4. Verify assets and mark image as pre-built ─────────────────────
+RUN echo "=== Asset verification ===" \
+    && ls -la sites/assets/ \
+    && test -f sites/assets/assets.json \
+    && echo "assets.json OK ($(wc -c < sites/assets/assets.json) bytes)" \
+    && touch /home/frappe/.build-complete \
+    && echo "Build marker created"
+
+# ── 5. Entrypoint (runtime: configure site, migrate, start) ──────────
 COPY --chown=frappe:frappe docker/railway-entrypoint.sh /workspace/railway-entrypoint.sh
 USER root
 RUN chmod +x /workspace/railway-entrypoint.sh

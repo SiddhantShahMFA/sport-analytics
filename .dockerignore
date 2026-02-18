@@ -10,9 +10,15 @@ __pycache__/
 .env
 env/
 venv/
+node_modules/
 frontend/node_modules/
 frontend/.yarn/
 frontend/dist/
 *.log
 .tmp_*
 cursor_deployment_plan_for_docker_image.md
+RAILWAY_DEPLOY.md
+docker-compose*.yml
+*.egg-info/
+.tox/
+.pytest_cache/
