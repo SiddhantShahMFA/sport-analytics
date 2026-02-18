@@ -37,13 +37,20 @@ RUN NODE_OPTIONS="--max-old-space-size=1536" bench build --apps insights \
     && echo "Insights assets built successfully" \
     || echo "WARNING: Insights frontend build failed (likely OOM). Frappe assets are still available."
 
-# ── 4. Verify assets and mark image as pre-built ─────────────────────
+# ── 4. Verify assets and clean up build artifacts to shrink image ─────
 RUN echo "=== Asset verification ===" \
     && ls -la sites/assets/ \
     && test -f sites/assets/assets.json \
     && echo "assets.json OK ($(wc -c < sites/assets/assets.json) bytes)" \
     && touch /home/frappe/.build-complete \
     && echo "Build marker created"
+
+RUN rm -rf apps/frappe/.git apps/insights/.git 2>/dev/null || true \
+    && rm -rf apps/insights/frontend/node_modules 2>/dev/null || true \
+    && rm -rf /home/frappe/.cache /home/frappe/.yarn /tmp/* 2>/dev/null || true \
+    && find . -name "*.map" -type f -delete 2>/dev/null || true \
+    && find . -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true \
+    && echo "Cleanup complete"
 
 # ── 5. Entrypoint (runtime: configure site, migrate, start) ──────────
 COPY --chown=frappe:frappe docker/railway-entrypoint.sh /workspace/railway-entrypoint.sh
