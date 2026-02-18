@@ -50,6 +50,7 @@ class DemoDataFactory:
     def initialize(self):
         self.db_url = "https://drive.google.com/uc?export=download&id=1l43RqU0KWKr04fx54PLsrHpWqMijRKTa"
         self.files_folder = frappe.get_site_path("private", "files")
+        os.makedirs(self.files_folder, exist_ok=True)
         self.db_filename = "insights_demo_data.duckdb"
         self.db_file_path = os.path.join(self.files_folder, self.db_filename)
 

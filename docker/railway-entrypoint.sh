@@ -178,7 +178,9 @@ except Exception as e:
 
 write_site_config() {
     local site_dir="${BENCH_DIR}/sites/${SITE_NAME}"
-    mkdir -p "${site_dir}" "${site_dir}/logs"
+    mkdir -p "${site_dir}" "${site_dir}/logs" \
+             "${site_dir}/private/files" "${site_dir}/private/backups" \
+             "${site_dir}/public/files"
 
     "${BENCH_DIR}/env/bin/python" -c "
 import json, os
