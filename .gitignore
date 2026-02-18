@@ -184,3 +184,4 @@ pids
 *.seed
 *.pid.lock
 todo
+.tmp_*
