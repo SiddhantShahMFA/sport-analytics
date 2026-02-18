@@ -30,16 +30,15 @@ RUN bench build --apps frappe
 RUN NODE_OPTIONS="--max-old-space-size=1536" bench build --apps insights \
     || echo "WARNING: Insights frontend build failed. Frappe assets still available."
 
-# Heavy cleanup while still in the builder stage (won't bloat final image)
+# Heavy cleanup (keep apps/frappe/node_modules — needed by socketio at runtime)
 RUN rm -rf apps/frappe/.git apps/insights/.git \
     && rm -rf apps/insights/frontend/node_modules \
-    && rm -rf apps/frappe/node_modules \
     && rm -rf /home/frappe/.cache /home/frappe/.yarn /home/frappe/.npm \
     && rm -rf /tmp/* \
     && find /home/frappe/frappe-bench -name "*.map" -type f -delete \
     && find /home/frappe/frappe-bench -name "__pycache__" -type d -exec rm -rf {} + \
     && find /home/frappe/frappe-bench -name "*.pyc" -type f -delete \
-    && find /home/frappe/frappe-bench -name ".git" -type d -exec rm -rf {} + 2>/dev/null || true
+    && find /home/frappe/frappe-bench -path "*/apps/frappe/node_modules" -prune -o -name ".git" -type d -exec rm -rf {} + 2>/dev/null || true
 
 # Resolve asset symlinks into real files so they survive the COPY
 RUN cd sites/assets \

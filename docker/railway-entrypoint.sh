@@ -331,15 +331,24 @@ start_process() {
             log "Starting all processes (web on port ${PORT}, worker, scheduler, socketio)"
             bench serve --port "${PORT}" &
             web_pid=$!
-            node apps/frappe/socketio.js &
-            socketio_pid=$!
+
+            if node apps/frappe/socketio.js &>/dev/null & then
+                socketio_pid=$!
+                log "Socketio started (PID ${socketio_pid})"
+            else
+                log "WARNING: Socketio failed to start (non-critical)"
+                socketio_pid=""
+            fi
+
             bench schedule &
             schedule_pid=$!
             bench worker &
             worker_pid=$!
 
             trap 'kill ${web_pid} ${socketio_pid} ${schedule_pid} ${worker_pid} 2>/dev/null || true' EXIT INT TERM
-            wait -n "${web_pid}" "${socketio_pid}" "${schedule_pid}" "${worker_pid}"
+
+            # Only wait on the web server — if IT dies, the container should restart
+            wait "${web_pid}"
             exit $?
             ;;
         *)
