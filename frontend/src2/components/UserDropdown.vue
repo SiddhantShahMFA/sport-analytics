@@ -13,7 +13,7 @@
 					"
 				>
 					<img
-						src="../assets/insights-logo-new.svg"
+						src="../assets/MobileFirst.svg"
 						alt="logo"
 						class="h-8 w-8 flex-shrink-0 rounded"
 					/>
@@ -25,7 +25,7 @@
 								: 'ml-2 w-auto opacity-100'
 						"
 					>
-						<div class="text-base font-medium leading-none text-gray-900">Insights</div>
+						<div class="text-base font-medium leading-none text-gray-900">MobileFirst</div>
 						<div class="mt-1 text-sm leading-none text-gray-700">
 							{{ __(session.user.full_name) }}
 						</div>
@@ -93,7 +93,7 @@
 
 <script setup lang="ts">
 import { call, Dropdown } from 'frappe-ui'
-import { ChevronDown, HelpCircle, LogOut, MessageCircle, ToggleRight } from 'lucide-vue-next'
+import { ChevronDown, LogOut, ToggleRight } from 'lucide-vue-next'
 import { h, ref } from 'vue'
 import { showErrorToast, waitUntil } from '../helpers'
 import { confirmDialog } from '../helpers/confirm_dialog'
@@ -107,16 +107,6 @@ const showSwitchToV2Dialog = ref(false)
 const showLoginToFCDialog = ref(false)
 
 const userDropdownOptions = ref([
-	{
-		label: __('Documentation'),
-		icon: h(HelpCircle),
-		onClick: () => window.open('https://docs.frappe.io/insights', '_blank'),
-	},
-	{
-		label: __('Join Telegram Group'),
-		icon: h(MessageCircle),
-		onClick: () => window.open('https://t.me/frappeinsights', '_blank'),
-	},
 	{
 		label: __('Log out'),
 		icon: h(LogOut),
@@ -138,13 +128,6 @@ waitUntil(() => session.initialized).then(() => {
 		})
 	}
 
-	if (session.user.is_admin) {
-		userDropdownOptions.value.splice(userDropdownOptions.value.length - 2, 0, {
-			label: 'Switch to Desk',
-			icon: h(ToggleRight),
-			onClick: () => window.open('/app', '_blank'),
-		})
-	}
 })
 
 if (window.is_fc_site) {

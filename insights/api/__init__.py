@@ -167,7 +167,7 @@ def import_csv_data(filename: str):
         uploads.db_insert()
 
     ds = frappe.get_doc("Insights Data Source v3", "uploads")
-    db = get_duckdb_connection(ds, read_only=False)
+    db = get_duckdb_connection(ds, read_only=False, allow_external_access=True)
 
     try:
         if ext in ["xlsx"]:

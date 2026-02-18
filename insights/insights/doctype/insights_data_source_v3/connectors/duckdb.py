@@ -9,24 +9,24 @@ import ibis
 from frappe.utils import get_files_path
 
 
-def get_duckdb_connection(data_source, read_only=True):
+def get_duckdb_connection(data_source, read_only=True,allow_external_access=False):
     name = data_source.name or frappe.scrub(data_source.title)
     db_name = data_source.database_name
 
     if db_name.startswith("http"):
         return get_http_duckdb_connection(data_source, name, db_name)
 
-    return get_local_duckdb_connection(db_name, read_only=read_only)
+    return get_local_duckdb_connection(db_name, read_only=read_only,allow_external_access=allow_external_access)
 
 
-def get_local_duckdb_connection(db_name, read_only=True):
+def get_local_duckdb_connection(db_name, read_only=True,allow_external_access=False):
     path = os.path.join(os.path.realpath(get_files_path(is_private=1)), f"{db_name}.duckdb")
 
     if not os.path.exists(path):
         db = ibis.duckdb.connect(path)
         db.disconnect()
 
-    return ibis.duckdb.connect(path, read_only=read_only, enable_external_access=False)
+    return ibis.duckdb.connect(path, read_only=read_only, enable_external_access=allow_external_access)
 
 
 def get_http_duckdb_connection(data_source, name, db_name):

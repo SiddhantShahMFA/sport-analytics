@@ -56,6 +56,7 @@
 			</div>
 
 			<div class="mt-auto flex flex-col items-center gap-2 text-base text-gray-600">
+<<<<<<< ours
 				<Tooltip placement="right" :hoverDelay="0.1">
 					<template #body>
 						<div
@@ -75,31 +76,16 @@
 				<Button variant="ghost" @click="open('https://docs.frappeinsights.com')">
 					<BookOpen class="h-4 text-gray-600" />
 				</Button>
+=======
+>>>>>>> theirs
 				<Dropdown
 					placement="left"
 					:options="[
-						{
-							label: 'Documentation',
-							icon: 'help-circle',
-							onClick: () => open('https://docs.frappeinsights.com'),
-						},
-						{
-							label: 'Join Telegram Group',
-							icon: 'message-circle',
-							onClick: () => open('https://t.me/frappeinsights'),
-						},
 						{
 							label: 'Help',
 							icon: 'life-buoy',
 							onClick: () => (showHelpDialog = true),
 						},
-						session.user.is_admin
-							? {
-									label: 'Switch to Desk',
-									icon: 'grid',
-									onClick: () => open('/app'),
-							  }
-							: null,
 						{
 							label: 'Open Insights v3',
 							icon: 'grid',
@@ -184,7 +170,6 @@ import settingsStore from '@/stores/settingsStore'
 import {
 	AlertTriangle,
 	Book,
-	BookOpen,
 	Database,
 	GanttChartSquare,
 	HomeIcon,

@@ -16,7 +16,7 @@ settings.load()
 			description="Appears in the top left corner of the application and in the browser tab next to the page title. Recommended size: 32x32px in PNG format."
 		>
 			<div class="flex h-full w-full items-center justify-center rounded border">
-				<img src="../assets/insights-logo-new.svg" alt="Logo" class="w-8 rounded" />
+				<img src="../assets/MobileFirst.svg" alt="Logo" class="w-8 rounded" />
 			</div>
 		</SettingItem>
 

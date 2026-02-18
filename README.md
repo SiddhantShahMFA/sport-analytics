@@ -175,7 +175,7 @@ To setup the repository locally follow the steps mentioned below:
 
 ## Compatibility Matrix
 
-| Insights Branch | Frappe Framework Version            | Node Version |
+| Mobile First Applications Branch | Frappe Framework Version            | Node Version |
 |-----------------|-------------------------------------|--------------|
 | main            | version-14, version-15              | v18+         |
 | version-3       | version-14, version-15              | v18+         |

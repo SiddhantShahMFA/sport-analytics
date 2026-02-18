@@ -137,7 +137,7 @@ const listOptions = ref({
 	},
 })
 
-document.title = 'Data Sources | Insights'
+document.title = 'Data Sources | Mobile First Applications'
 </script>
 
 <template>

@@ -137,7 +137,7 @@ function sendInvitation() {
 	showInviteUserDialog.value = false
 }
 
-document.title = 'Users | Insights'
+document.title = 'Users | Mobile First Applications'
 </script>
 
 <template>
