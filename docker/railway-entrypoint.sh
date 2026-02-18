@@ -246,6 +246,18 @@ install_and_migrate() {
     bench --site "${SITE_NAME}" set-config developer_mode 1 || true
     bench --site "${SITE_NAME}" set-config mute_emails 1 || true
     bench --site "${SITE_NAME}" clear-cache || true
+
+    log "Cleaning up corrupt sessions (user IS NULL)"
+    "${BENCH_DIR}/env/bin/python" -c "
+import frappe
+frappe.init(site='${SITE_NAME}')
+frappe.connect()
+frappe.db.sql('DELETE FROM tabSessions WHERE user IS NULL OR user = \"\"')
+frappe.db.commit()
+count = frappe.db.sql('SELECT COUNT(*) FROM tabSessions')[0][0]
+print(f'Active sessions remaining: {count}')
+frappe.destroy()
+" || true
 }
 
 # ── Asset management ───────────────────────────────────────────────────
