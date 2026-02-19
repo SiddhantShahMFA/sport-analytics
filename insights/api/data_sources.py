@@ -275,6 +275,10 @@ def get_reverse_cardinality(cardinality):
 def get_all_data_sources():
     return frappe.get_list(
         "Insights Data Source v3",
+        filters={
+            "is_site_db": 0,
+            "name": ["!=", "demo_data"],
+        },
         fields=[
             "name",
             "status",
