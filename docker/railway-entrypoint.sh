@@ -231,10 +231,20 @@ create_or_restore_site() {
 install_and_migrate() {
     cd "${BENCH_DIR}"
 
+    local site_dir="${BENCH_DIR}/sites/${SITE_NAME}"
+    mkdir -p "${site_dir}/logs" \
+             "${site_dir}/private/files" "${site_dir}/private/backups" \
+             "${site_dir}/public/files"
+    log "Ensured site directories exist for ${SITE_NAME}"
+
     if is_true "${INSTALL_INSIGHTS_APP}"; then
-        if ! bench --site "${SITE_NAME}" list-apps 2>/dev/null | grep -qx 'insights'; then
+        local installed_apps
+        installed_apps=$(bench --site "${SITE_NAME}" list-apps 2>/dev/null || echo "")
+        if ! echo "${installed_apps}" | grep -qx 'insights'; then
             log "Installing insights app on ${SITE_NAME}"
             bench --site "${SITE_NAME}" install-app insights
+        else
+            log "Insights app already installed on ${SITE_NAME}"
         fi
     fi
 
@@ -245,6 +255,7 @@ install_and_migrate() {
 
     bench --site "${SITE_NAME}" set-config developer_mode 1 || true
     bench --site "${SITE_NAME}" set-config mute_emails 1 || true
+    bench --site "${SITE_NAME}" set-config home_page "insights" || true
     bench --site "${SITE_NAME}" clear-cache || true
 
     log "Cleaning up corrupt sessions (user IS NULL)"
